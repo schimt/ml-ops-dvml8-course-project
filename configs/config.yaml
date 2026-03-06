@@ -1,0 +1,9 @@
+dataset:
+  train_dir: data/train
+  test_dir: data/test
+
+training:
+  batch_size: 32
+  epochs: 5
+  learning_rate: 0.001
+  image_size: 128
