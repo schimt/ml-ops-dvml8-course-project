@@ -1,0 +1,5 @@
+outs:
+- md5: 4ff4db9dc5943a2c10d1e655b5e0cc97
+  size: 29574149
+  hash: md5
+  path: cat_dog_cnn.pth
