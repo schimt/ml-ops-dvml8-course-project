@@ -1,5 +1,4 @@
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import torch
 import yaml
@@ -9,13 +8,17 @@ from torchvision import datasets, transforms
 
 from model import CatDogCNN
 
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 
 def load_config(config_path="configs/config.yaml"):
+    """Load training configuration from YAML file."""
     with open(config_path, "r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
 
 def train():
+    """Train the CNN model on the cats vs dogs dataset."""
     config = load_config()
 
     train_dir = config["dataset"]["train_dir"]
@@ -24,20 +27,22 @@ def train():
     learning_rate = config["training"]["learning_rate"]
     image_size = config["training"]["image_size"]
 
-    transform = transforms.Compose([
-        transforms.Resize((image_size, image_size)),
-        transforms.ToTensor(),
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.Resize((image_size, image_size)),
+            transforms.ToTensor(),
+        ]
+    )
 
     train_dataset = datasets.ImageFolder(
         root=train_dir,
-        transform=transform
+        transform=transform,
     )
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
-        shuffle=True
+        shuffle=True,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
