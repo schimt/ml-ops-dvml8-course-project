@@ -1,6 +1,8 @@
 import os
+import shutil
 
 import mlflow
+import mlflow.pytorch
 import torch
 import yaml
 from torch import nn, optim
@@ -35,12 +37,12 @@ def evaluate(model, test_loader, device):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    accuracy = correct / total
+    accuracy = correct / total if total > 0 else 0.0
     return accuracy
 
 
 def train():
-    """Train the CNN model on the cats vs dogs dataset."""
+    """Train, evaluate, register, and deploy the CNN model."""
     config = load_config()
 
     train_dir = config["dataset"]["train_dir"]
@@ -49,6 +51,7 @@ def train():
     epochs = config["training"]["epochs"]
     learning_rate = config["training"]["learning_rate"]
     image_size = config["training"]["image_size"]
+    accuracy_threshold = config["training"]["accuracy_threshold"]
 
     transform = transforms.Compose(
         [
@@ -95,6 +98,7 @@ def train():
         mlflow.log_param("learning_rate", learning_rate)
         mlflow.log_param("image_size", image_size)
         mlflow.log_param("device", str(device))
+        mlflow.log_param("accuracy_threshold", accuracy_threshold)
 
         model.train()
 
@@ -130,6 +134,48 @@ def train():
 
         mlflow.log_artifact(model_path)
         mlflow.log_artifact("configs/config.yaml")
+
+        model_status = "rejected"
+        deployment_status = "not_deployed"
+
+        if test_accuracy >= accuracy_threshold:
+            model_status = "accepted"
+            print(
+                f"Model passed threshold ({accuracy_threshold:.2f}) "
+                "and was accepted."
+            )
+
+            # Register/log approved model in MLflow
+            mlflow.pytorch.log_model(
+                pytorch_model=model,
+                artifact_path="approved_model",
+            )
+
+            # Simple deployment step: copy approved model to deployment folder
+            os.makedirs("deployment", exist_ok=True)
+            deployed_model_path = "deployment/cat_dog_cnn.pth"
+            shutil.copy(model_path, deployed_model_path)
+            deployment_status = "deployed"
+
+            print(f"Model deployed to {deployed_model_path}")
+            mlflow.log_artifact(deployed_model_path)
+
+        else:
+            print(
+                f"Model did not pass threshold ({accuracy_threshold:.2f}) "
+                "and was rejected."
+            )
+
+        mlflow.log_param("model_status", model_status)
+        mlflow.log_param("deployment_status", deployment_status)
+
+        # Store model card in MLflow if it exists
+        model_card_path = "docs/model_card.md"
+        if os.path.exists(model_card_path):
+            mlflow.log_artifact(model_card_path)
+            print(f"Model card logged from {model_card_path}")
+        else:
+            print(f"Model card not found at {model_card_path}")
 
 
 if __name__ == "__main__":

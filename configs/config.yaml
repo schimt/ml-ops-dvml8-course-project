@@ -7,3 +7,4 @@ training:
   epochs: 5
   learning_rate: 0.001
   image_size: 128
+  accuracy_threshold: 0.80
