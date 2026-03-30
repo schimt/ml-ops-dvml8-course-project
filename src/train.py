@@ -8,8 +8,9 @@ import yaml
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+from torch.cuda.amp import autocast, GradScaler
 
-from model import CatDogCNN
+from src.model import CatDogCNN
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -53,6 +54,8 @@ def train():
     image_size = config["training"]["image_size"]
     accuracy_threshold = config["training"]["accuracy_threshold"]
 
+    use_amp = config["training"].get("use_amp", False)
+
     transform = transforms.Compose(
         [
             transforms.Resize((image_size, image_size)),
@@ -87,6 +90,7 @@ def train():
     model = CatDogCNN().to(device)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scaler = GradScaler(enabled=use_amp)
 
     mlflow.set_experiment("cats-dogs-training")
 
@@ -111,11 +115,13 @@ def train():
 
                 optimizer.zero_grad()
 
-                outputs = model(images)
-                loss = loss_fn(outputs, labels)
+                with autocast(enabled=use_amp):
+                    outputs = model(images)
+                    loss = loss_fn(outputs, labels)
 
-                loss.backward()
-                optimizer.step()
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
 
                 running_loss += loss.item()
 
