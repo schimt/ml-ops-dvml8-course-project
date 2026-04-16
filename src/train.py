@@ -5,6 +5,7 @@ import mlflow
 import mlflow.pytorch
 import torch
 import yaml
+from carbontracker.tracker import CarbonTracker
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -105,8 +106,10 @@ def train():
         mlflow.log_param("accuracy_threshold", accuracy_threshold)
 
         model.train()
-
+        
+        tracker = CarbonTracker(epochs=epochs)
         for epoch in range(epochs):
+            tracker.epoch_start()
             running_loss = 0.0
 
             for images, labels in train_loader:
@@ -128,6 +131,10 @@ def train():
             avg_loss = running_loss / len(train_loader)
             print(f"Epoch {epoch + 1}/{epochs} - Loss: {avg_loss:.4f}")
             mlflow.log_metric("train_loss", avg_loss, step=epoch + 1)
+
+            tracker.epoch_end()
+            
+        tracker.stop()
 
         test_accuracy = evaluate(model, test_loader, device)
         print(f"Test Accuracy: {test_accuracy:.4f}")
