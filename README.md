@@ -71,3 +71,18 @@ Services:
 
 Grafana uses the default credentials `admin` / `admin` and automatically loads
 the `Cats vs Dogs API Monitoring` dashboard from `monitoring/grafana/dashboards`.
+
+## Limitations
+
+- The Docker image is built in CI, but it is not pushed to a registry because
+  registry credentials and setup are outside the project scope.
+- GitHub Actions is used for CI/CD instead of Jenkins. This is valid for the
+  course because Jenkins, GitHub Actions, or another preferred CI/CD framework
+  are allowed.
+- Branch protection is a GitHub repository setting and is not configured in
+  code.
+- Android phone deployment was not performed. Local quantization experiments
+  and FastAPI deployment were used as a fallback.
+- EWC was discussed as a continual learning extension, but it was not
+  implemented.
+- DDP and DeepSpeed experiments require the AI-Lab/GPU setup to run properly.

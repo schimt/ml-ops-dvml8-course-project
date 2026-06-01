@@ -22,6 +22,16 @@ Run tests:
 pytest -q
 ```
 
+Build the Docker image locally:
+
+```powershell
+docker build -t mlops-catdog:test .
+```
+
+This validates that the project can be packaged into a container. The same
+build check is also run in GitHub Actions, but the image is not pushed to a
+registry.
+
 ## Scalable Training Experiments
 
 Run Distributed Data Parallel training with `torchrun`:
