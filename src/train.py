@@ -106,7 +106,7 @@ def train():
         mlflow.log_param("accuracy_threshold", accuracy_threshold)
 
         model.train()
-        
+
         tracker = CarbonTracker(epochs=epochs)
         for epoch in range(epochs):
             tracker.epoch_start()
@@ -133,7 +133,7 @@ def train():
             mlflow.log_metric("train_loss", avg_loss, step=epoch + 1)
 
             tracker.epoch_end()
-            
+
         tracker.stop()
 
         test_accuracy = evaluate(model, test_loader, device)

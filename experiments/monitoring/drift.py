@@ -1,8 +1,8 @@
+# flake8: noqa: E402
 import os
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
-import torch
 import matplotlib.pyplot as plt
 from experiments.scalable_inference.infer import get_test_loader
 

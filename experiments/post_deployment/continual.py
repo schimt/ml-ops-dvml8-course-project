@@ -1,3 +1,4 @@
+# flake8: noqa: E402
 import os
 import random
 
@@ -164,8 +165,14 @@ def main():
 
     print("\n--- Experience Replay ---")
     print(f"Replay memory size: {memory_size}")
-    print(f"Accuracy on old digits 0-4 after replay: {acc_0_4_after_replay:.4f}")
-    print(f"Accuracy on new digits 5-9 after replay: {acc_5_9_after_replay:.4f}")
+    print(
+        "Accuracy on old digits 0-4 after replay: "
+        f"{acc_0_4_after_replay:.4f}"
+    )
+    print(
+        "Accuracy on new digits 5-9 after replay: "
+        f"{acc_5_9_after_replay:.4f}"
+    )
 
     print("\nSaved forgetting plot to artifacts/mm7_forgetting.png")
 

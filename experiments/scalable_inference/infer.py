@@ -1,3 +1,4 @@
+# flake8: noqa: E402
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -10,8 +11,6 @@ from carbontracker.tracker import CarbonTracker
 
 
 from src.model import CatDogCNN
-
-
 
 
 def load_model(path, quantized=False):

@@ -1,3 +1,4 @@
+# flake8: noqa: E402
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -9,8 +10,6 @@ from src.model import CatDogCNN
 from experiments.scalable_inference.infer import evaluate, get_test_loader
 
 
-
-
 def load_model(path):
     model = CatDogCNN()
     model.load_state_dict(torch.load(path, map_location="cpu"))
@@ -20,17 +19,23 @@ def load_model(path):
 
 def apply_pruning(model, amount):
     for module in model.modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear):
+        if isinstance(
+            module,
+            (torch.nn.Conv2d, torch.nn.Linear),
+        ):
             prune.l1_unstructured(module, name="weight", amount=amount)
     return model
 
 
 def remove_pruning(model):
     for module in model.modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear):
+        if isinstance(
+            module,
+            (torch.nn.Conv2d, torch.nn.Linear),
+        ):
             try:
                 prune.remove(module, "weight")
-            except:
+            except (AttributeError, ValueError):
                 pass
     return model
 
@@ -68,13 +73,13 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-df = pd.read_csv("artifacts/pruning_results.csv")
+    df = pd.read_csv("artifacts/pruning_results.csv")
 
-plt.plot(df["pruning"] * 100, df["accuracy"], marker="o")
-plt.xlabel("Pruning (%)")
-plt.ylabel("Accuracy")
-plt.title("Pruning vs Accuracy")
-plt.grid()
+    plt.plot(df["pruning"] * 100, df["accuracy"], marker="o")
+    plt.xlabel("Pruning (%)")
+    plt.ylabel("Accuracy")
+    plt.title("Pruning vs Accuracy")
+    plt.grid()
 
-plt.savefig("artifacts/pruning_plot.png")
-plt.close()
+    plt.savefig("artifacts/pruning_plot.png")
+    plt.close()

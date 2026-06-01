@@ -1,9 +1,9 @@
+# flake8: noqa: E402
 import os
 import time
 
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
-import torch
 import yaml
 from torch import nn
 from torch.utils.data import DataLoader

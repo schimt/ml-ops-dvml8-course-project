@@ -1,26 +1,26 @@
+# flake8: noqa: E402
 import os
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import torch
 import torch.nn.utils.prune as prune
 from torch import nn, optim
-from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
 
-from src.model import CatDogCNN
 from experiments.scalable_inference.infer import evaluate, get_test_loader
-
+from src.model import CatDogCNN
 
 
 def get_train_loader(batch_size):
     transform = transforms.Compose([
         transforms.Resize((128, 128)),
-        transforms.ToTensor()
+        transforms.ToTensor(),
     ])
 
     dataset = datasets.ImageFolder("data/train", transform=transform)
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
 
 
 def load_model(path):
@@ -31,20 +31,25 @@ def load_model(path):
 
 def apply_pruning(model, amount):
     for module in model.modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear):
+        if isinstance(
+            module,
+            (torch.nn.Conv2d, torch.nn.Linear),
+        ):
             prune.l1_unstructured(module, name="weight", amount=amount)
     return model
 
 
 def remove_pruning(model):
     for module in model.modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear):
+        if isinstance(
+            module,
+            (torch.nn.Conv2d, torch.nn.Linear),
+        ):
             try:
                 prune.remove(module, "weight")
-            except:
+            except (AttributeError, ValueError):
                 pass
     return model
-
 
 
 def train(model, loader, epochs=3):
@@ -53,7 +58,7 @@ def train(model, loader, epochs=3):
 
     model.train()
 
-    for epoch in range(epochs):
+    for _ in range(epochs):
         for images, labels in loader:
             optimizer.zero_grad()
 
@@ -66,12 +71,11 @@ def train(model, loader, epochs=3):
     return model
 
 
-
 if __name__ == "__main__":
     model_path = "models/cat_dog_cnn.pth"
 
-    train_loader = get_train_loader(32)   # ✅ TRAIN DATA
-    test_loader = get_test_loader(32)     # ✅ TEST DATA
+    train_loader = get_train_loader(32)
+    test_loader = get_test_loader(32)
 
     model = load_model(model_path)
     model = apply_pruning(model, 0.8)

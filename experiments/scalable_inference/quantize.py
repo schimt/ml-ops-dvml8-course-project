@@ -1,5 +1,7 @@
+# flake8: noqa: E402
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import torch
 from src.model import CatDogCNN
 

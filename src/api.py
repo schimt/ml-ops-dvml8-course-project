@@ -1,3 +1,4 @@
+# flake8: noqa: E402
 import os
 import time
 from contextlib import asynccontextmanager
@@ -119,7 +120,11 @@ def health() -> dict:
 async def predict(file: UploadFile = File(...)) -> dict:
     if not MODEL_PATH.exists():
         PREDICTION_ERRORS.labels(error_type="model_missing").inc()
-        REQUEST_COUNT.labels(endpoint="/predict", method="POST", status="503").inc()
+        REQUEST_COUNT.labels(
+            endpoint="/predict",
+            method="POST",
+            status="503",
+        ).inc()
         raise HTTPException(status_code=503, detail="No deployed model found.")
 
     image_bytes = await file.read()
@@ -135,7 +140,11 @@ async def predict(file: UploadFile = File(...)) -> dict:
     predicted_class = CLASS_NAMES[predicted_idx.item()]
     INFERENCE_LATENCY.observe(latency)
     PREDICTION_COUNT.labels(predicted_class=predicted_class).inc()
-    REQUEST_COUNT.labels(endpoint="/predict", method="POST", status="200").inc()
+    REQUEST_COUNT.labels(
+        endpoint="/predict",
+        method="POST",
+        status="200",
+    ).inc()
 
     return {
         "prediction": predicted_class,

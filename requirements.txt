@@ -10,3 +10,7 @@ fastapi
 uvicorn[standard]
 prometheus-client
 python-multipart
+carbontracker
+pandas
+httpx
+dvc
