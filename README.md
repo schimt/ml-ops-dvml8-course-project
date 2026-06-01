@@ -1,6 +1,42 @@
 # ml-ops-dvml8-course-project
 MLOps course project
 
+## Project structure
+
+The repository separates the main MLOps pipeline from standalone course
+experiments.
+
+```text
+src/
+  model.py
+  train.py
+  api.py
+
+experiments/
+  scalable_training/
+    train_ddp.py
+    train_deepspeed.py
+  scalable_inference/
+    infer.py
+    quantize.py
+    prune.py
+    finetune_prune.py
+    timing.py
+    evaluate_model.py
+  monitoring/
+    drift.py
+  post_deployment/
+    continual.py
+    unlearning.py
+```
+
+The main pipeline is implemented in `src/`: model definition, config-based
+training, MLflow logging, deployment, and FastAPI serving. The `experiments/`
+directory contains module-specific scripts used to document scalable training,
+scalable inference, monitoring, continual learning, and unlearning.
+
+See `docs/run_commands.md` for the most common commands.
+
 ## FastAPI deployment and monitoring
 
 The deployed cats-vs-dogs model can be served through a FastAPI service. The
