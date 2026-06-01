@@ -67,6 +67,45 @@ def train_with_tracking(model, loader, optimizer, old_loader, epochs=2):
     return old_accuracy_history
 
 
+def train_ewc_with_tracking(
+    model,
+    loader,
+    optimizer,
+    old_loader,
+    fisher,
+    old_parameters,
+    ewc_lambda,
+    epochs=2,
+):
+    criterion = nn.CrossEntropyLoss()
+    old_accuracy_history = []
+    model.train()
+
+    for epoch in range(epochs):
+        for images, labels in loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+            task_loss = criterion(model(images), labels)
+            loss = task_loss + ewc_lambda * ewc_penalty(
+                model,
+                fisher,
+                old_parameters,
+            )
+            loss.backward()
+            optimizer.step()
+
+        old_accuracy = evaluate(model, old_loader)
+        old_accuracy_history.append(old_accuracy)
+        print(
+            f"Epoch {epoch + 1} with replay + EWC: "
+            f"accuracy on 0-4 = {old_accuracy:.4f}"
+        )
+
+    return old_accuracy_history
+
+
 def evaluate(model, loader):
     model.eval()
     correct = 0
@@ -89,13 +128,66 @@ def create_replay_loader(new_dataset, memory, batch_size=64):
     return DataLoader(combined_data, batch_size=batch_size, shuffle=True)
 
 
-def save_forgetting_plot(history):
+def estimate_fisher(model, loader, max_batches=20):
+    criterion = nn.CrossEntropyLoss()
+    fisher = {
+        name: torch.zeros_like(parameter)
+        for name, parameter in model.named_parameters()
+        if parameter.requires_grad
+    }
+
+    model.eval()
+    for batch_index, (images, labels) in enumerate(loader):
+        if batch_index >= max_batches:
+            break
+
+        images = images.to(device)
+        labels = labels.to(device)
+
+        model.zero_grad()
+        loss = criterion(model(images), labels)
+        loss.backward()
+
+        for name, parameter in model.named_parameters():
+            if parameter.grad is not None:
+                fisher[name] += parameter.grad.detach() ** 2
+
+    for name in fisher:
+        fisher[name] /= max_batches
+
+    return fisher
+
+
+def copy_parameters(model):
+    return {
+        name: parameter.detach().clone()
+        for name, parameter in model.named_parameters()
+        if parameter.requires_grad
+    }
+
+
+def ewc_penalty(model, fisher, old_parameters):
+    penalty = torch.tensor(0.0, device=device)
+
+    for name, parameter in model.named_parameters():
+        if name in fisher:
+            penalty += (
+                fisher[name] * (parameter - old_parameters[name]) ** 2
+            ).sum()
+
+    return penalty
+
+
+def save_forgetting_plot(histories):
     os.makedirs("artifacts", exist_ok=True)
 
-    plt.plot(range(1, len(history) + 1), history, marker="o")
+    for label, history in histories.items():
+        plt.plot(range(1, len(history) + 1), history, marker="o", label=label)
+
     plt.xlabel("Epoch while training on digits 5-9")
     plt.ylabel("Accuracy on old task digits 0-4")
-    plt.title("Catastrophic Forgetting")
+    plt.title("Catastrophic Forgetting and Continual Learning")
+    plt.legend()
     plt.grid()
     plt.savefig("artifacts/mm7_forgetting.png")
     plt.close()
@@ -144,8 +236,6 @@ def main():
     print(f"Accuracy on old digits 0-4: {acc_0_4_after_naive:.4f}")
     print(f"Accuracy on new digits 5-9: {acc_5_9_after_naive:.4f}")
 
-    save_forgetting_plot(forgetting_history)
-
     # -------------------------
     # Experience replay
     # -------------------------
@@ -153,18 +243,26 @@ def main():
     replay_optimizer = optim.Adam(replay_model.parameters(), lr=0.001)
 
     train(replay_model, loader_0_4, replay_optimizer, epochs=2)
+    acc_0_4_before_replay = evaluate(replay_model, loader_0_4)
 
     memory_size = 2000
     memory = random.sample(list(data_0_4), memory_size)
     replay_train_loader = create_replay_loader(data_5_9, memory)
 
-    train(replay_model, replay_train_loader, replay_optimizer, epochs=3)
+    replay_history = train_with_tracking(
+        replay_model,
+        replay_train_loader,
+        replay_optimizer,
+        loader_0_4,
+        epochs=3,
+    )
 
     acc_0_4_after_replay = evaluate(replay_model, loader_0_4)
     acc_5_9_after_replay = evaluate(replay_model, loader_5_9)
 
     print("\n--- Experience Replay ---")
     print(f"Replay memory size: {memory_size}")
+    print(f"Initial accuracy on digits 0-4: {acc_0_4_before_replay:.4f}")
     print(
         "Accuracy on old digits 0-4 after replay: "
         f"{acc_0_4_after_replay:.4f}"
@@ -172,6 +270,52 @@ def main():
     print(
         "Accuracy on new digits 5-9 after replay: "
         f"{acc_5_9_after_replay:.4f}"
+    )
+
+    # -------------------------
+    # Experience replay + EWC
+    # -------------------------
+    ewc_lambda = 10.0
+    ewc_model = Net().to(device)
+    ewc_optimizer = optim.Adam(ewc_model.parameters(), lr=0.001)
+
+    train(ewc_model, loader_0_4, ewc_optimizer, epochs=2)
+    acc_0_4_before_ewc = evaluate(ewc_model, loader_0_4)
+    old_parameters = copy_parameters(ewc_model)
+    fisher = estimate_fisher(ewc_model, loader_0_4, max_batches=20)
+
+    ewc_history = train_ewc_with_tracking(
+        ewc_model,
+        replay_train_loader,
+        ewc_optimizer,
+        loader_0_4,
+        fisher,
+        old_parameters,
+        ewc_lambda,
+        epochs=3,
+    )
+
+    acc_0_4_after_ewc = evaluate(ewc_model, loader_0_4)
+    acc_5_9_after_ewc = evaluate(ewc_model, loader_5_9)
+
+    print("\n--- Experience Replay + EWC ---")
+    print(f"EWC lambda: {ewc_lambda}")
+    print(f"Initial accuracy on digits 0-4: {acc_0_4_before_ewc:.4f}")
+    print(
+        "Accuracy on old digits 0-4 after replay + EWC: "
+        f"{acc_0_4_after_ewc:.4f}"
+    )
+    print(
+        "Accuracy on new digits 5-9 after replay + EWC: "
+        f"{acc_5_9_after_ewc:.4f}"
+    )
+
+    save_forgetting_plot(
+        {
+            "Naive": forgetting_history,
+            "Replay": replay_history,
+            "Replay + EWC": ewc_history,
+        }
     )
 
     print("\nSaved forgetting plot to artifacts/mm7_forgetting.png")
