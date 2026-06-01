@@ -83,6 +83,8 @@ the `Cats vs Dogs API Monitoring` dashboard from `monitoring/grafana/dashboards`
   code.
 - Android phone deployment was not performed. Local quantization experiments
   and FastAPI deployment were used as a fallback.
-- EWC was discussed as a continual learning extension, but it was not
-  implemented.
+- EWC was implemented in the MM7 experiment. Replay + EWC was evaluated
+  against naive sequential training and replay. EWC did not clearly outperform
+  replay alone, but it demonstrates the regularization-based continual learning
+  method required by the exercise.
 - DDP and DeepSpeed experiments require the AI-Lab/GPU setup to run properly.
