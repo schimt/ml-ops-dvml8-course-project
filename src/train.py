@@ -5,11 +5,13 @@ import mlflow
 import mlflow.pytorch
 import torch
 import yaml
+from carbontracker.tracker import CarbonTracker
 from torch import nn, optim
+from torch.cuda.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-from model import CatDogCNN
+from src.model import CatDogCNN
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -53,6 +55,8 @@ def train():
     image_size = config["training"]["image_size"]
     accuracy_threshold = config["training"]["accuracy_threshold"]
 
+    use_amp = config["training"].get("use_amp", False)
+
     transform = transforms.Compose(
         [
             transforms.Resize((image_size, image_size)),
@@ -87,6 +91,7 @@ def train():
     model = CatDogCNN().to(device)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scaler = GradScaler(enabled=use_amp)
 
     mlflow.set_experiment("cats-dogs-training")
 
@@ -102,7 +107,9 @@ def train():
 
         model.train()
 
+        tracker = CarbonTracker(epochs=epochs)
         for epoch in range(epochs):
+            tracker.epoch_start()
             running_loss = 0.0
 
             for images, labels in train_loader:
@@ -111,17 +118,23 @@ def train():
 
                 optimizer.zero_grad()
 
-                outputs = model(images)
-                loss = loss_fn(outputs, labels)
+                with autocast(enabled=use_amp):
+                    outputs = model(images)
+                    loss = loss_fn(outputs, labels)
 
-                loss.backward()
-                optimizer.step()
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
 
                 running_loss += loss.item()
 
             avg_loss = running_loss / len(train_loader)
             print(f"Epoch {epoch + 1}/{epochs} - Loss: {avg_loss:.4f}")
             mlflow.log_metric("train_loss", avg_loss, step=epoch + 1)
+
+            tracker.epoch_end()
+
+        tracker.stop()
 
         test_accuracy = evaluate(model, test_loader, device)
         print(f"Test Accuracy: {test_accuracy:.4f}")
@@ -145,13 +158,11 @@ def train():
                 "and was accepted."
             )
 
-            # Register/log approved model in MLflow
             mlflow.pytorch.log_model(
                 pytorch_model=model,
                 artifact_path="approved_model",
             )
 
-            # Simple deployment step: copy approved model to deployment folder
             os.makedirs("deployment", exist_ok=True)
             deployed_model_path = "deployment/cat_dog_cnn.pth"
             shutil.copy(model_path, deployed_model_path)
@@ -169,7 +180,6 @@ def train():
         mlflow.log_param("model_status", model_status)
         mlflow.log_param("deployment_status", deployment_status)
 
-        # Store model card in MLflow if it exists
         model_card_path = "docs/model_card.md"
         if os.path.exists(model_card_path):
             mlflow.log_artifact(model_card_path)
