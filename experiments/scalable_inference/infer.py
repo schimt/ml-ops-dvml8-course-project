@@ -1,14 +1,15 @@
 # flake8: noqa: E402
 import os
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import time
-import torch
+
 import matplotlib.pyplot as plt
+import torch
+from carbontracker.tracker import CarbonTracker
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from carbontracker.tracker import CarbonTracker
-
 
 from src.model import CatDogCNN
 
@@ -18,7 +19,9 @@ def load_model(path, quantized=False):
 
     if quantized:
         model = torch.quantization.quantize_dynamic(
-            model, {torch.nn.Linear}, dtype=torch.qint8
+            model,
+            {torch.nn.Linear},
+            dtype=torch.qint8,
         )
 
     model.load_state_dict(torch.load(path, map_location="cpu"))
@@ -27,10 +30,12 @@ def load_model(path, quantized=False):
 
 
 def get_test_loader(batch_size):
-    transform = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor()
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.Resize((128, 128)),
+            transforms.ToTensor(),
+        ]
+    )
 
     dataset = datasets.ImageFolder("data/test", transform=transform)
 
@@ -56,7 +61,7 @@ def evaluate(model, loader):
     total_time = end - start
     accuracy = correct / total
 
-    throughput = total / total_time  # images per second
+    throughput = total / total_time
 
     return accuracy, total_time, throughput
 
@@ -68,7 +73,6 @@ if __name__ == "__main__":
 
     print("\n--- Batch Inference Results ---")
 
-    # 🔥 CarbonTracker for inference
     tracker = CarbonTracker(epochs=1)
     tracker.epoch_start()
 
@@ -92,7 +96,6 @@ if __name__ == "__main__":
     tracker.epoch_end()
     tracker.stop()
 
-    # 🔥 Monitoring plot
     plt.plot(batch_sizes, latencies, marker="o")
     plt.title("Inference Latency vs Batch Size")
     plt.xlabel("Batch Size")

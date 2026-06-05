@@ -6,8 +6,8 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
+from torchvision import datasets, transforms
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -59,7 +59,6 @@ def train(model, loader, optimizer, epochs=3):
             optimizer.step()
 
 
-# task 1: train on all digits
 transform = transforms.ToTensor()
 dataset = datasets.MNIST(
     root="data",
@@ -95,7 +94,6 @@ print(f"class 7: {acc_7_before:.4f}")
 print(f"non-7: {acc_non7_before:.4f}")
 
 
-# task 2: unlearn class 7
 print("\nunlearning class 7...")
 
 criterion = nn.CrossEntropyLoss()
@@ -109,7 +107,6 @@ for x, y in loader_7:
     unlearn_optimizer.step()
 
 
-# task 3: evaluate
 acc_all_after = evaluate(model, full_loader)
 acc_7_after = evaluate(model, loader_7)
 acc_non7_after = evaluate(model, loader_non7)

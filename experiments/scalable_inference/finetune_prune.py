@@ -14,10 +14,12 @@ from src.model import CatDogCNN
 
 
 def get_train_loader(batch_size):
-    transform = transforms.Compose([
-        transforms.Resize((128, 128)),
-        transforms.ToTensor(),
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.Resize((128, 128)),
+            transforms.ToTensor(),
+        ]
+    )
 
     dataset = datasets.ImageFolder("data/train", transform=transform)
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)

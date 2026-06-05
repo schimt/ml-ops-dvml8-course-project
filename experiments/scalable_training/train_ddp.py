@@ -85,8 +85,6 @@ def train():
 
     loss_fn = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-    # ✅ AMP (REQUIRED FOR MM3)
     scaler = torch.amp.GradScaler("cuda")
 
     if rank == 0:
@@ -106,19 +104,16 @@ def train():
 
             optimizer.zero_grad()
 
-            # ✅ AMP forward pass
             with torch.amp.autocast("cuda"):
                 outputs = model(images)
                 loss = loss_fn(outputs, labels)
 
-            # ✅ AMP backward
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
 
             running_loss += loss.item()
 
-        # ✅ Aggregate loss across GPUs
         loss_tensor = torch.tensor(running_loss, device=device)
         dist.all_reduce(loss_tensor, op=dist.ReduceOp.SUM)
 

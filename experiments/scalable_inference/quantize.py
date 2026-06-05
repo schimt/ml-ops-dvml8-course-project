@@ -1,5 +1,6 @@
 # flake8: noqa: E402
 import os
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import torch
@@ -17,7 +18,7 @@ def quantize_model(model):
     return torch.quantization.quantize_dynamic(
         model,
         {torch.nn.Linear},
-        dtype=torch.qint8
+        dtype=torch.qint8,
     )
 
 

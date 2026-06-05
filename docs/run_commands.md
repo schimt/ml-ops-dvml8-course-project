@@ -65,8 +65,9 @@ Build the Docker image locally:
 docker build -t mlops-catdog:test .
 ```
 
-This checks that the project can be built as a container. GitHub Actions runs
-the same build check, but the image is not pushed to a registry.
+This checks that the project can be built as a container. On push events,
+GitHub Actions builds the image and pushes it to GitHub Container Registry with
+the commit SHA tag.
 
 ## Scalable Training Experiments
 

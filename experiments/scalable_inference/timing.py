@@ -12,23 +12,17 @@ from src.model import CatDogCNN
 
 device = torch.device("cpu")
 
-
-# load fp32 model
 model_fp32 = CatDogCNN()
 model_fp32.load_state_dict(
     torch.load("models/cat_dog_cnn.pth", map_location="cpu")
 )
 model_fp32.eval()
 
-
-# create quantized model
 model_int8 = torch.quantization.quantize_dynamic(
     model_fp32, {nn.Linear}, dtype=torch.qint8
 )
 model_int8.eval()
 
-
-# dummy input
 dummy = torch.randn(1, 3, 128, 128)
 
 

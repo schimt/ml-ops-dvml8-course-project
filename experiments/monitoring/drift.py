@@ -10,8 +10,6 @@ loader = get_test_loader(32)
 images, _ = next(iter(loader))
 
 original = images.flatten()
-
-# simulate drift
 drifted = original * 1.3 + 0.2
 
 print("Original mean:", original.mean().item())

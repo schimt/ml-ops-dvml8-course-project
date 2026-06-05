@@ -1,82 +1,61 @@
-# ml-ops-dvml8-course-project
+# Cats vs Dogs MLOps Pipeline
 
-This is my MLOps course project for cats-vs-dogs image classification. The
-classifier is a small PyTorch CNN. The model is not the interesting part by
-itself; the point of the project is to build the pipeline around it.
+This repository contains an MLOps course project built around a small PyTorch
+CNN for cats-vs-dogs image classification. The classifier is intentionally a
+baseline; the main goal is to show the workflow around the model: versioning,
+testing, training, tracking, containerization, local deployment, and monitoring.
 
-The repo covers config-based training, MLflow tracking, a simple model
-acceptance step, deployment of an accepted model, a FastAPI inference service,
-and local monitoring with Prometheus and Grafana. It also includes separate
-experiment scripts for the course modules.
+![Final MLOps pipeline](docs/final_pipeline.png)
 
-## Pipeline
+## Implemented Components
 
-The normal workflow is:
+- Git/GitHub version control with `main` and `development` branches.
+- DVC for data and model versioning.
+- Pre-commit checks for YAML, file hygiene, and Flake8.
+- GitHub Actions CI with tests, coverage, Docker build, and GHCR image push
+  using the commit SHA tag on push events.
+- Config-based PyTorch training with MLflow tracking.
+- Model acceptance using `accuracy_threshold: 0.50`.
+- Local FastAPI deployment from `deployment/cat_dog_cnn.pth`.
+- FastAPI `/health`, `/predict`, and `/metrics` endpoints.
+- Docker and Docker Compose for the API, Prometheus, and Grafana.
+- Scalable training experiments with DDP, AMP, and DeepSpeed/ZeRO.
+- Scalable inference experiments with quantization, batch inference, pruning,
+  and fine-tuning after pruning.
+- Post-deployment experiments for continual learning and unlearning on MNIST.
 
-```text
-configs/config.yaml
-  -> python -m src.train
-  -> MLflow logging
-  -> model acceptance check
-  -> deployment/cat_dog_cnn.pth
-  -> FastAPI service
-  -> Prometheus/Grafana monitoring
-```
+## Final Model
 
-`configs/config.yaml` controls the training parameters. `src.train` trains and
-evaluates the model, logs the run to MLflow, and checks whether the model meets
-the configured threshold. If the model is accepted, the trained weights are
-copied to `deployment/cat_dog_cnn.pth`.
+- Accepted model path: `deployment/cat_dog_cnn.pth`
+- Acceptance threshold: `0.50`
+- Final accepted test accuracy: `0.5286`
+- Model format: PyTorch `.pth`
 
-The FastAPI service loads that deployed model and exposes prediction and
-monitoring endpoints.
+The low threshold is deliberate for this project. It keeps the acceptance and
+deployment path visible even though the classifier accuracy is limited.
 
-## Repository Layout
+## Repository Structure
 
 ```text
 src/
-  model.py
-  train.py
-  api.py
+  model.py                  CNN architecture
+  train.py                  training, MLflow logging, acceptance, deployment
+  api.py                    FastAPI inference and Prometheus metrics
 
 experiments/
-  scalable_training/
-    train_ddp.py
-    train_deepspeed.py
-  scalable_inference/
-    infer.py
-    quantize.py
-    prune.py
-    finetune_prune.py
-    timing.py
-    evaluate_model.py
-  monitoring/
-    drift.py
-  post_deployment/
-    continual.py
-    unlearning.py
+  scalable_training/        DDP, AMP, and DeepSpeed/ZeRO experiments
+  scalable_inference/       quantization, pruning, timing, batch inference
+  monitoring/               drift detection experiment
+  post_deployment/          continual learning and unlearning experiments
 
-docs/
-  model_card.md
-  run_commands.md
-
-monitoring/
-  prometheus.yml
-  grafana/
-
-tests/
-artifacts/
-configs/
+configs/                    training configuration
+deployment/                 accepted deployment model
+monitoring/                 Prometheus and Grafana configuration
+tests/                      unit/API tests
+docs/                       model card, commands, final pipeline image
+artifacts/                  generated plots and experiment outputs
+.github/workflows/          CI workflow
 ```
-
-`src/` is the actual pipeline code: model, training script, and API.
-
-`experiments/` is for the module-specific work, such as DDP, DeepSpeed,
-quantization, pruning, drift detection, continual learning, EWC, and
-unlearning. These scripts are not part of the serving path.
-
-`monitoring/` has the Prometheus and Grafana setup. `docs/` has the model card
-and a longer command list. `artifacts/` has generated plots and result files.
 
 ## Setup
 
@@ -86,13 +65,25 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-If the DVC-tracked data/model files are missing locally:
+If DVC-tracked files are missing locally:
 
 ```powershell
 dvc pull
 ```
 
-## Training and MLflow
+Run tests:
+
+```powershell
+pytest -q
+```
+
+Run Flake8:
+
+```powershell
+python -m flake8 src experiments tests
+```
+
+## Training and Tracking
 
 Run the training pipeline:
 
@@ -100,47 +91,34 @@ Run the training pipeline:
 python -m src.train
 ```
 
-Open MLflow:
+Start the MLflow UI:
 
 ```powershell
 mlflow ui --backend-store-uri mlruns
 ```
 
-The current threshold is:
+The training script reads `configs/config.yaml`, logs parameters and metrics to
+MLflow, saves the trained model under `models/`, and copies accepted weights to
+`deployment/cat_dog_cnn.pth`.
 
-```text
-accuracy_threshold: 0.50
-```
+## Local API
 
-This threshold is low on purpose. It lets the project show the acceptance and
-deployment flow even though the CNN is only a baseline model. A threshold such
-as `0.80` would make more sense for a stronger classifier, but it would often
-reject this model and skip the deployment step.
-
-## API
-
-Run the FastAPI service:
+Start FastAPI locally:
 
 ```powershell
 uvicorn src.api:app --host 127.0.0.1 --port 8000
 ```
 
-Useful endpoints:
+Useful URLs and endpoints:
 
 - FastAPI docs: http://127.0.0.1:8000/docs
 - `GET /health`
 - `POST /predict`
 - `GET /metrics`
 
-The API loads:
+## Docker and Monitoring
 
-```text
-deployment/cat_dog_cnn.pth
-```
-
-## Monitoring
-
-Run the API with Prometheus and Grafana:
+Run the local stack:
 
 ```powershell
 docker compose up --build
@@ -152,78 +130,57 @@ Services:
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000
 
-Grafana login:
+Grafana uses the local demo login:
 
 ```text
 admin / admin
 ```
 
-The dashboard is loaded from `monitoring/grafana/dashboards`.
+## Experiment Notes
 
-## Tests and CI
-
-Run tests:
+Scalable training:
 
 ```powershell
-pytest -q
+python -m experiments.scalable_training.train_ddp
+python -m experiments.scalable_training.train_deepspeed
 ```
-
-Run pre-commit checks:
-
-```powershell
-pre-commit run --all-files
-```
-
-Build the Docker image locally:
-
-```powershell
-docker build -t mlops-catdog:test .
-```
-
-GitHub Actions is used as the CI/CD tool. The workflow runs pre-commit, tests,
-coverage, and a Docker build. The Docker image is only built as a check; it is
-not pushed to a registry.
-
-## Experiments
-
-The extra scripts are not part of the serving pipeline. They are used to
-document the course module experiments.
 
 Scalable inference:
 
 ```powershell
-python -m experiments.scalable_inference.prune
+python -m experiments.scalable_inference.quantize
 python -m experiments.scalable_inference.timing
 python -m experiments.scalable_inference.infer
+python -m experiments.scalable_inference.prune
+python -m experiments.scalable_inference.finetune_prune
 ```
 
-Drift detection:
+Monitoring and post-deployment experiments:
 
 ```powershell
 python -m experiments.monitoring.drift
-```
-
-Post-deployment:
-
-```powershell
 python -m experiments.post_deployment.continual
 python -m experiments.post_deployment.unlearning
 ```
 
-The continual learning script compares naive sequential training, experience
-replay, and replay with EWC. The unlearning script tests class-specific
-unlearning on MNIST.
+Recorded results include:
+
+- Quantization latency: FP32 `0.004733`, INT8 `0.004309`, speedup `1.10x`.
+- Fine-tuning after pruning: before `0.5286`, after `0.5214`.
+- Yearly inference carbon estimate: around `2.45 g CO2eq`.
 
 More commands are listed in `docs/run_commands.md`.
 
 ## Limitations
 
-- The model accuracy is limited. The project is mainly about the MLOps pipeline,
-  not about building the best cats-vs-dogs classifier.
-- `accuracy_threshold = 0.50` is used to show the deployment flow.
-- The Docker image is built in CI but not pushed to a registry.
-- Android phone deployment was not completed. Local quantization experiments
-  and FastAPI deployment were used as the fallback.
-- Multi-node, DDP, and DeepSpeed experiments require the AI-Lab/GPU setup.
-- The monitoring setup is local and does not include authentication, TLS, rate
-  limiting, or alert rules.
+- The classifier accuracy is low; the project is primarily about the MLOps
+  pipeline.
+- Phone deployment was not completed.
+- Cloud deployment was not completed.
+- Deployment and monitoring are local only.
+- Multi-node training was not fully validated.
+- AMP is implemented in `experiments/scalable_training/train_ddp.py`, but no
+  isolated non-AMP baseline was run.
+- ZeRO was explored, but no meaningful VRAM saving claim is made.
+- The local monitoring setup does not include production authentication, TLS,
+  rate limiting, or alerting.

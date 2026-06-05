@@ -1,13 +1,15 @@
 # flake8: noqa: E402
 import os
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
+import matplotlib.pyplot as plt
+import pandas as pd
 import torch
 import torch.nn.utils.prune as prune
-import pandas as pd
 
-from src.model import CatDogCNN
 from experiments.scalable_inference.infer import evaluate, get_test_loader
+from src.model import CatDogCNN
 
 
 def load_model(path):
@@ -57,21 +59,21 @@ if __name__ == "__main__":
         model = apply_pruning(model, p)
         model = remove_pruning(model)
 
-        acc, total_time, throughput = evaluate(model, loader)
+        acc, _, _ = evaluate(model, loader)
 
         print(f"Accuracy: {acc:.4f}")
 
-        results.append({
-            "pruning": p,
-            "accuracy": acc
-        })
+        results.append(
+            {
+                "pruning": p,
+                "accuracy": acc,
+            }
+        )
 
     df = pd.DataFrame(results)
     df.to_csv("artifacts/pruning_results.csv", index=False)
 
     print("\nSaved results to artifacts/pruning_results.csv")
-
-    import matplotlib.pyplot as plt
 
     df = pd.read_csv("artifacts/pruning_results.csv")
 

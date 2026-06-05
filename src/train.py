@@ -7,9 +7,9 @@ import torch
 import yaml
 from carbontracker.tracker import CarbonTracker
 from torch import nn, optim
+from torch.cuda.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from torch.cuda.amp import autocast, GradScaler
 
 from src.model import CatDogCNN
 
@@ -158,13 +158,11 @@ def train():
                 "and was accepted."
             )
 
-            # Register/log approved model in MLflow
             mlflow.pytorch.log_model(
                 pytorch_model=model,
                 artifact_path="approved_model",
             )
 
-            # Simple deployment step: copy approved model to deployment folder
             os.makedirs("deployment", exist_ok=True)
             deployed_model_path = "deployment/cat_dog_cnn.pth"
             shutil.copy(model_path, deployed_model_path)
@@ -182,7 +180,6 @@ def train():
         mlflow.log_param("model_status", model_status)
         mlflow.log_param("deployment_status", deployment_status)
 
-        # Store model card in MLflow if it exists
         model_card_path = "docs/model_card.md"
         if os.path.exists(model_card_path):
             mlflow.log_artifact(model_card_path)

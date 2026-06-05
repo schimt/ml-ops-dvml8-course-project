@@ -209,9 +209,6 @@ def main():
     loader_0_4 = DataLoader(data_0_4, batch_size=64, shuffle=True)
     loader_5_9 = DataLoader(data_5_9, batch_size=64, shuffle=True)
 
-    # -------------------------
-    # Naive sequential training
-    # -------------------------
     naive_model = Net().to(device)
     naive_optimizer = optim.Adam(naive_model.parameters(), lr=0.001)
 
@@ -236,9 +233,6 @@ def main():
     print(f"Accuracy on old digits 0-4: {acc_0_4_after_naive:.4f}")
     print(f"Accuracy on new digits 5-9: {acc_5_9_after_naive:.4f}")
 
-    # -------------------------
-    # Experience replay
-    # -------------------------
     replay_model = Net().to(device)
     replay_optimizer = optim.Adam(replay_model.parameters(), lr=0.001)
 
@@ -272,9 +266,6 @@ def main():
         f"{acc_5_9_after_replay:.4f}"
     )
 
-    # -------------------------
-    # Experience replay + EWC
-    # -------------------------
     ewc_lambda = 10.0
     ewc_model = Net().to(device)
     ewc_optimizer = optim.Adam(ewc_model.parameters(), lr=0.001)
