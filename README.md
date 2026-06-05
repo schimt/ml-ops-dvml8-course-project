@@ -1,9 +1,7 @@
-# Cats vs Dogs MLOps Pipeline
+# DVML MLOps Pipeline
 
 This repository contains an MLOps course project built around a small PyTorch
-CNN for cats-vs-dogs image classification. The classifier is intentionally a
-baseline; the main goal is to show the workflow around the model: versioning,
-testing, training, tracking, containerization, local deployment, and monitoring.
+CNN for cats-vs-dogs image classification. The classifier is used as a baseline model, and the proejct is focused on demonstrating the workflow around an ML model for MLOps. The project includes data/model versioning, configuration-based training, testing, MLflow experiment tracking, Docker containerization, GitHub Actions CI with GHCR image publishing, local FastAPI deployment, Prometheus/Grafana monitoring, and additional experiments for scalable trainnig, scalalbe inference, and post-deployment methods.
 
 ![Final MLOps pipeline](docs/final_pipeline.png)
 
@@ -173,10 +171,8 @@ More commands are listed in `docs/run_commands.md`.
 
 ## Limitations
 
-- The classifier accuracy is low; the project is primarily about the MLOps
-  pipeline.
+- The classifier accuracy is low due to dataset
 - Phone deployment was not completed.
-- Cloud deployment was not completed.
 - Deployment and monitoring are local only.
 - Multi-node training was not fully validated.
 - AMP is implemented in `experiments/scalable_training/train_ddp.py`, but no
